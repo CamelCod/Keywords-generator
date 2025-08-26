@@ -1,0 +1,234 @@
+{
+  "id": "automation-keywords-generator",
+  "name": "Copy of Automation Keywords Generator",
+  "version": "2.0.0",
+  "description": "Turns raw document text and filenames into clean, deduplicated, locale-aware keyword sets using deterministic rules (lowercasing, tokenization, phrase allow-lists, stopwords, and optional numeric filtering).",
+  "homepage": "https://example.com/automation-keywords-generator",
+  "author": "Your Org",
+  "license": "Proprietary",
+  "categories": [
+    "search",
+    "content-tagging",
+    "automation"
+  ],
+  "runtime": {
+    "llm": {
+      "provider": "google",
+      "model": "gemini-2.0-flash",
+      "usage": "optional",
+      "reasoning": "disabled"
+    }
+  },
+  "capabilities": {
+    "extractFrom": [
+      "text",
+      "title",
+      "filename"
+    ],
+    "languages": [
+      "en",
+      "ar",
+      "es",
+      "pt",
+      "zh",
+      "fr"
+    ],
+    "locales": [
+      "en-US",
+      "en-GB",
+      "ar-AE",
+      "es-MX",
+      "pt-BR",
+      "zh-CN",
+      "fr-FR"
+    ]
+  },
+  "defaultConfig": {
+    "normalize": {
+      "lowercase": true,
+      "trim": true,
+      "unicodeNFKC": true,
+      "punctAsSpace": true,
+      "separators": [
+        " ",
+        "-",
+        "—",
+        "_",
+        "/",
+        ".",
+        ","
+      ],
+      "collapseWhitespace": true
+    },
+    "tokenizer": {
+      "allowPhrases": true,
+      "phraseDelimiter": ";",
+      "minTokenLength": 3,
+      "maxTokenLength": 64,
+      "keepAlnumOnly": true,
+      "allowApostrophesInsideWords": true
+    },
+    "filters": {
+      "dedupe": "case-insensitive",
+      "stopwords": {
+        "enabled": true,
+        "source": "builtin+custom"
+      },
+      "blocklist": {
+        "enabled": true,
+        "source": "custom"
+      },
+      "whitelistPhrases": {
+        "enabled": true,
+        "source": "custom",
+        "matchMode": "substring"
+      },
+      "numbers": {
+        "policy": "keep-if-mixed",
+        "examples": [
+          "141mm",
+          "api5ct"
+        ]
+      }
+    },
+    "ranking": {
+      "scoring": "frequency-then-length",
+      "tieBreak": "alphabetical",
+      "limit": 50
+    },
+    "output": {
+      "format": "csv",
+      "delimiter": ",",
+      "quote": false,
+      "unique": true,
+      "sorted": true
+    },
+    "validation": {
+      "requireKeywords": 1,
+      "maxKeywords": 200,
+      "rejectIfEmpty": true
+    }
+  },
+  "schemas": {
+    "input": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Full document text. Filenames/titles can be concatenated up front."
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional title or filename to bias phrase detection."
+        },
+        "locale": {
+          "type": "string",
+          "description": "BCP-47 locale like en-US or ar-AE.",
+          "default": "en-US"
+        },
+        "approvedPhrases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Multi-word phrases that must be treated as single keywords (e.g., 'assembly work instructions')."
+        },
+        "customStopwords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional stopwords to remove post-normalization."
+        },
+        "blocklist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tokens/phrases to force-exclude."
+        },
+        "configOverrides": {
+          "type": "object",
+          "description": "Partial object that overrides defaultConfig for this request."
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "required": [
+        "keywords",
+        "csv"
+      ],
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordered, unique keyword array after all rules."
+        },
+        "csv": {
+          "type": "string",
+          "description": "CSV string of keywords respecting output.format and delimiter."
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "totalBeforeFilters": {
+              "type": "integer"
+            },
+            "totalAfterFilters": {
+              "type": "integer"
+            },
+            "localeUsed": {
+              "type": "string"
+            },
+            "appliedRules": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "qualityGates": [
+    "lowercased-only",
+    "length>=3",
+    "deduped",
+    "stopwords-removed",
+    "blocklist-removed",
+    "whitelist-phrases-preserved",
+    "maxKeywords-enforced"
+  ],
+  "dataSources": {
+    "stopwords": {
+      "builtin": [
+        "en",
+        "ar",
+        "es",
+        "pt",
+        "zh",
+        "fr"
+      ],
+      "custom": "upload-or-endpoint"
+    },
+    "approvedPhrases": "upload-or-endpoint",
+    "blocklist": "upload-or-endpoint"
+  },
+  "observability": {
+    "logging": "errors-only",
+    "redactPII": true,
+    "emitMetrics": true
+  },
+  "privacy": {
+    "storesUserData": false,
+    "retentionDays": 0
+  },
+  "requestFramePermissions": []
+}
